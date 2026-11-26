@@ -95,9 +95,17 @@ Monthly fact-to-date joins reproduce the original sales report.
 Missing customer IDs remain null. Product descriptions and countries
 remain on transaction rows to preserve their source context.
 Foreign-key constraints are not yet enforced.
-## Author
 
-Rashmi Thimmaraju
+## Data Quality
+
+The dashboard displays missing customer IDs, missing descriptions,
+flagged repeated rows, and transactions requiring review.
+
+Indicators cover the full dataset and may overlap.
+Pipeline checks separately validate CSV-to-database consistency
+and monthly warehouse reconciliation.
+
+![Data quality](screenshots/data-quality.png)
 ## Author
 
 Rashmi Thimmaraju

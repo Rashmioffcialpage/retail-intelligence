@@ -20,13 +20,35 @@ st.caption("Transaction analysis · UCI Online Retail · SQLite · GBP")
 
 @st.cache_data
 def load_data(database_modified: int) -> pd.DataFrame:
-    # Refresh the cache when the database is rebuilt.
+    # Refresh cached data whenever the database changes.
     with sqlite3.connect(
         f"{DATABASE.as_uri()}?mode=ro",
         uri=True,
     ) as connection:
         data = pd.read_sql_query(
-            "SELECT * FROM transactions",
+            """
+            SELECT
+                f.transaction_id AS source_row,
+                f.invoice_no AS InvoiceNo,
+                p.stock_code AS StockCode,
+                f.source_description AS Description,
+                f.quantity AS Quantity,
+                f.invoice_timestamp AS InvoiceDate,
+                f.unit_price_gbp AS UnitPrice,
+                c.customer_id AS CustomerID,
+                f.transaction_country AS Country,
+                f.line_value_gbp,
+                f.transaction_type,
+                f.is_repeated_row
+            FROM fact_transactions AS f
+            LEFT JOIN dim_product AS p
+                ON f.stock_code = p.stock_code
+            LEFT JOIN dim_customer AS c
+                ON f.customer_id = c.customer_id
+            LEFT JOIN dim_date AS d
+                ON f.date_key = d.date_key
+            ORDER BY f.transaction_id
+            """,
             connection,
             parse_dates=["InvoiceDate"],
         )
@@ -457,3 +479,85 @@ else:
         file_name="forecast_evaluation.csv",
         mime="text/csv",
     )
+st.divider()
+st.header("Data Quality")
+
+st.caption(
+    "Checks cover the entire loaded warehouse. "
+    "Country filters and the repeated-row exclusion do not apply."
+)
+
+total_rows = len(df)
+missing_customers = (
+    df["CustomerID"].isna()
+    | df["CustomerID"].str.strip().eq("").fillna(False)
+).sum()
+missing_descriptions = (
+    df["Description"].isna()
+    | df["Description"].astype("string").str.strip().eq("").fillna(False)
+).sum()
+repeated_rows = int(df["is_repeated_row"].sum())
+review_rows = int(df["transaction_type"].eq("review").sum())
+
+a, b, c, d = st.columns(4)
+
+a.metric("Source transaction rows", f"{total_rows:,}")
+b.metric("Missing customer IDs", f"{missing_customers:,}")
+c.metric("Flagged repeated rows", f"{repeated_rows:,}")
+d.metric("Rows requiring review", f"{review_rows:,}")
+
+quality = pd.DataFrame({
+    "Check": [
+        "Missing customer ID",
+        "Missing or blank description",
+        "Flagged repeated row",
+        "Requires review",
+    ],
+    "Rows": [
+        int(missing_customers),
+        int(missing_descriptions),
+        repeated_rows,
+        review_rows,
+    ],
+})
+
+quality["Percent of rows"] = (
+    quality["Rows"] / total_rows * 100
+).round(2)
+
+st.dataframe(
+    quality,
+    hide_index=True,
+    use_container_width=True,
+)
+
+st.caption(
+    "Checks may overlap, so their counts should not be added together. "
+    "Missing customer IDs remain included in transaction totals. "
+    "Repeated rows are flags for review, not confirmed errors."
+)
+
+classification = (
+    df["transaction_type"]
+    .value_counts()
+    .rename_axis("Transaction type")
+    .reset_index(name="Rows")
+)
+
+st.plotly_chart(
+    px.bar(
+        classification,
+        x="Transaction type",
+        y="Rows",
+        title="Transaction classification",
+        color_discrete_sequence=["#2563EB"],
+    ),
+    use_container_width=True,
+)
+
+st.download_button(
+    "Download data quality summary",
+    data=quality.to_csv(index=False).encode("utf-8"),
+    file_name="data_quality_summary.csv",
+    mime="text/csv",
+)
