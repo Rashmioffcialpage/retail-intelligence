@@ -1,0 +1,59 @@
+# Retail Intelligence
+
+A retail data analysis pipeline and interactive dashboard built with
+Python, Pandas, Streamlit, and Plotly.
+
+## Features
+
+- Processes 541,909 source transaction rows.
+- Reports missing values, repeated rows, and invalid prices.
+- Separates sales, credits/adjustments, and rows requiring review.
+- Analyzes monthly sales, countries, and product/service codes.
+- Provides country filters and downloadable monthly reports.
+
+## Dashboard
+
+![Dashboard overview](screenshots/retail-dashboard-overview.png)
+
+![Country and product analysis](screenshots/retail-country-product-analysis.png)
+
+## Run locally
+
+Requires Python 3.10 or newer.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+Download the UCI Online Retail dataset:
+https://archive.ics.uci.edu/dataset/352/online+retail
+
+Extract `Online Retail.xlsx` into `data/raw/`, then run:
+
+```bash
+python prepare_data.py
+python analyze_sales.py
+python -m streamlit run dashboard.py
+```
+
+## Analysis notes
+
+- Data coverage ends December 9, 2011; that month is incomplete.
+- Net transaction value is not profit.
+- Sales include service codes such as postage.
+- Missing customer IDs remain included in transaction totals.
+- Repeated rows are flagged and retained by default.
+- The duplicate-exclusion option is a sensitivity check.
+
+## Project files
+
+- `prepare_data.py`: preparation and data-quality reporting.
+- `analyze_sales.py`: monthly, country, and product reports.
+- `dashboard.py`: interactive Streamlit dashboard.
+- `reports/`: generated analysis outputs.
+
+## Author
+
+Rashmi Thimmaraju
