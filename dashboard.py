@@ -1,10 +1,12 @@
 from pathlib import Path
+import sqlite3
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parent
+DATABASE = ROOT / "data/retail.db"
 
 st.set_page_config(
     page_title="Retail Intelligence",
@@ -13,34 +15,61 @@ st.set_page_config(
 )
 
 st.title("Retail Intelligence")
-st.caption("Transaction analysis · UCI Online Retail · GBP")
+st.caption("Transaction analysis · UCI Online Retail · SQLite · GBP")
+
 
 @st.cache_data
-def load_data():
-    return pd.read_csv(
-        ROOT / "data/processed/transactions_prepared.csv",
-        dtype={
-            "InvoiceNo": "string",
-            "StockCode": "string",
-            "CustomerID": "string",
-        },
-        parse_dates=["InvoiceDate"],
+def load_data(database_modified: int) -> pd.DataFrame:
+    # The modification time refreshes the cache after a database rebuild.
+    with sqlite3.connect(
+        f"{DATABASE.as_uri()}?mode=ro",
+        uri=True,
+    ) as connection:
+        data = pd.read_sql_query(
+            "SELECT * FROM transactions",
+            connection,
+            parse_dates=["InvoiceDate"],
+        )
+
+    for column in ["InvoiceNo", "StockCode", "CustomerID"]:
+        data[column] = data[column].astype("string")
+
+    # SQLite may store Boolean values as integers.
+    data["is_repeated_row"] = (
+        data["is_repeated_row"]
+        .astype("string")
+        .str.lower()
+        .isin(["true", "1", "1.0"])
     )
 
-df = load_data()
+    return data
+
+
+if not DATABASE.exists():
+    st.error("Database missing. Run: python build_database.py")
+    st.stop()
+
+try:
+    df = load_data(DATABASE.stat().st_mtime_ns)
+except (sqlite3.Error, pd.errors.DatabaseError) as error:
+    st.error("Could not read the database. Run: python build_database.py")
+    st.code(str(error))
+    st.stop()
 
 st.sidebar.header("Filters")
 
 countries = st.sidebar.multiselect(
     "Countries",
-    sorted(df["Country"].dropna().unique()),
-    default=["United Kingdom"],
+    sorted(df["Country"].dropna().unique().tolist()),
+    default=sorted(df["Country"].dropna().unique().tolist()),
 )
 
 exclude_repeats = st.sidebar.checkbox(
     "Exclude flagged repeated rows",
     value=False,
 )
+
+st.sidebar.caption("Data source: local SQLite database")
 
 if not countries:
     st.info("Select at least one country.")
@@ -49,13 +78,7 @@ if not countries:
 filtered = df.loc[df["Country"].isin(countries)].copy()
 
 if exclude_repeats:
-    repeated = (
-        filtered["is_repeated_row"]
-        .astype(str)
-        .str.lower()
-        .eq("true")
-    )
-    filtered = filtered.loc[~repeated].copy()
+    filtered = filtered.loc[~filtered["is_repeated_row"]].copy()
 
 sales = filtered.loc[
     filtered["transaction_type"].eq("sale")
@@ -85,26 +108,27 @@ sales["month"] = (
     sales["InvoiceDate"].dt.to_period("M").astype(str)
 )
 
-monthly = sales.groupby(
-    "month", as_index=False
-)["line_value_gbp"].sum()
+monthly = (
+    sales.groupby("month")["line_value_gbp"]
+    .sum()
+    .reset_index(name="sales_value_gbp")
+    .sort_values("month")
+)
 
 st.plotly_chart(
     px.bar(
         monthly,
         x="month",
-        y="line_value_gbp",
+        y="sales_value_gbp",
         title="Monthly sales value",
         labels={
             "month": "Month",
-            "line_value_gbp": "Sales value (£)",
+            "sales_value_gbp": "Sales value (£)",
         },
         color_discrete_sequence=["#2563EB"],
     ),
     use_container_width=True,
 )
-
-left, right = st.columns(2)
 
 country_sales = (
     sales.groupby("Country")["line_value_gbp"]
@@ -120,8 +144,11 @@ product_sales = (
         description=("Description", "first"),
         sales_value_gbp=("line_value_gbp", "sum"),
     )
-    .nlargest(10, "sales_value_gbp")
+    .sort_values("sales_value_gbp", ascending=False)
+    .head(10)
 )
+
+left, right = st.columns(2)
 
 with left:
     st.subheader("Sales by country")
