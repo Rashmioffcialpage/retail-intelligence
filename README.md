@@ -78,7 +78,23 @@ over eight historical test weeks.
 The four-week average achieved £37,877.97 MAE and 12.28% WAPE.
 
 ![Sales forecast evaluation](screenshots/sales-forecast-evaluation.png)
+## Dimensional Warehouse
 
+Built a SQLite dimensional model containing:
+
+| Table | Rows | Purpose |
+|---|---:|---|
+| fact_transactions | 541,909 | One row per source transaction line |
+| dim_product | 4,070 | Product and service codes |
+| dim_customer | 4,372 | Identified customers across all transaction types |
+| dim_date | 374 | Calendar dates across source coverage |
+
+The build checks row-count preservation and required dimension links.
+Monthly fact-to-date joins reproduce the original sales report.
+
+Missing customer IDs remain null. Product descriptions and countries
+remain on transaction rows to preserve their source context.
+Foreign-key constraints are not yet enforced.
 ## Author
 
 Rashmi Thimmaraju

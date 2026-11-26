@@ -4,16 +4,16 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parent
-
 steps = [
     "prepare_data.py",
     "build_database.py",
     "validate_pipeline.py",
+    "build_warehouse.py",
+    "warehouse_analysis.py",
     "analyze_sales.py",
     "customer_analysis.py",
     "forecast_sales.py",
 ]
-
 started = time.perf_counter()
 
 for step in steps:
