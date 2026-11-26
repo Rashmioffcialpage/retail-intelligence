@@ -53,7 +53,13 @@ python -m streamlit run dashboard.py
 - `analyze_sales.py`: monthly, country, and product reports.
 - `dashboard.py`: interactive Streamlit dashboard.
 - `reports/`: generated analysis outputs.
+## Customer Analytics
 
+Customer purchase recency, invoice frequency, sales value, and
+six exploratory business-rule segments, evaluated at December 10, 2011.
+
+![Customer analytics](screenshots/customer-analytics.png)
+![Customer segments](screenshots/customer-segments.png)
 ## Author
 
 Rashmi Thimmaraju
