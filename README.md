@@ -60,6 +60,15 @@ six exploratory business-rule segments, evaluated at December 10, 2011.
 
 ![Customer analytics](screenshots/customer-analytics.png)
 ![Customer segments](screenshots/customer-segments.png)
+
+## Run the pipeline
+
+After placing Online Retail.xlsx in data/raw/:
+
+```bash
+python run_pipeline.py
+python -m streamlit run dashboard.py
+
 ## Author
 
 Rashmi Thimmaraju
