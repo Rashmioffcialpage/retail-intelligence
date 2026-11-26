@@ -11,6 +11,7 @@ steps = [
     "validate_pipeline.py",
     "analyze_sales.py",
     "customer_analysis.py",
+    "forecast_sales.py",
 ]
 
 started = time.perf_counter()

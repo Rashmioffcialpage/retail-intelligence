@@ -68,7 +68,18 @@ After placing Online Retail.xlsx in data/raw/:
 ```bash
 python run_pipeline.py
 python -m streamlit run dashboard.py
+## Sales Forecast Evaluation
 
+Compared a previous-week baseline with a four-week moving average
+using rolling one-week-ahead evaluation over eight historical weeks.
+
+The four-week average achieved £37,877.97 MAE and 12.28% WAPE,
+with approximately 16.6% lower MAE than the baseline.
+
+Results cover all countries, retain flagged repeated rows,
+and measure sales before credits, including service codes.
+
+![Sales forecast evaluation](screenshots/sales-forecast-evaluation.png)
 ## Author
 
 Rashmi Thimmaraju

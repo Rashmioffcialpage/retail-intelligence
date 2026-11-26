@@ -372,3 +372,88 @@ else:
         file_name="customer_segments.csv",
         mime="text/csv",
     )
+
+st.divider()
+st.header("Sales Forecast Evaluation")
+
+st.caption(
+    "Rolling one-week-ahead evaluation over eight historical weeks. "
+    "Each prediction uses only earlier observed weeks. "
+    "These results cover all countries and retain repeated rows; "
+    "the sidebar filters do not apply."
+)
+
+forecast_path = ROOT / "reports/forecast_evaluation.csv"
+metrics_path = ROOT / "reports/forecast_metrics.csv"
+
+if not forecast_path.exists() or not metrics_path.exists():
+    st.info("Run python forecast_sales.py to generate the evaluation.")
+else:
+    forecast = pd.read_csv(
+        forecast_path,
+        parse_dates=["week_ending"],
+    )
+    metrics = pd.read_csv(metrics_path)
+
+    chart_data = forecast.rename(columns={
+        "actual_sales_gbp": "Actual sales",
+        "previous_week_gbp": "Previous week baseline",
+        "four_week_average_gbp": "Four-week average",
+    })
+
+    figure = px.line(
+        chart_data,
+        x="week_ending",
+        y=[
+            "Actual sales",
+            "Previous week baseline",
+            "Four-week average",
+        ],
+        markers=True,
+        title="Actual sales versus historical predictions",
+        labels={
+            "week_ending": "Week ending",
+            "value": "Sales value (£)",
+            "variable": "Series",
+        },
+        color_discrete_map={
+            "Actual sales": "#2563EB",
+            "Previous week baseline": "#94A3B8",
+            "Four-week average": "#16A34A",
+        },
+    )
+
+    st.plotly_chart(
+        figure,
+        use_container_width=True,
+    )
+
+    st.subheader("Prediction errors")
+
+    st.dataframe(
+        metrics.rename(columns={
+            "method": "Method",
+            "mae_gbp": "MAE (£)",
+            "rmse_gbp": "RMSE (£)",
+            "wape_percent": "WAPE (%)",
+        }).round({
+            "MAE (£)": 2,
+            "RMSE (£)": 2,
+            "WAPE (%)": 2,
+        }),
+        hide_index=True,
+        use_container_width=True,
+    )
+
+    st.caption(
+        "Lower errors are better. Sales values exclude credits and "
+        "include service codes. This is a historical evaluation, "
+        "not a future forecast or evidence of year-round performance."
+    )
+
+    st.download_button(
+        "Download forecast evaluation",
+        data=forecast.to_csv(index=False).encode("utf-8"),
+        file_name="forecast_evaluation.csv",
+        mime="text/csv",
+    )
